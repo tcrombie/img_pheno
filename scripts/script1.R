@@ -90,3 +90,23 @@ server <- function(input, output) {
 #################
 shinyApp(ui = ui, server = server)
 
+# Working image overlay with dimensions
+##################
+img <- readPNG("~/Desktop/20190723_Ben1/CP_output/RUN_7_FullDose_OUTPUT/20190618_1_A01_w1_overlay.png") 
+
+h<-dim(img)[1] # image height
+w<-dim(img)[2] # image width
+
+plot(ggplot(df) +
+       aes(x = AreaShape_Center_X, y = AreaShape_Center_Y, fill = model_select) +
+       annotation_custom(grid::rasterGrob(img, width=unit(1,"npc"), height=unit(1,"npc")), 0, w, 0, -h) + # The minus is needed to get the y scale reversed
+       scale_x_continuous(expand=c(0,0),limits=c(0,w)) +
+       scale_y_reverse(expand=c(0,0),limits=c(h,0)) +
+       labs(x = "", y = "", fill = "Model Selection") +
+       geom_point(shape = 21, alpha = 0.5) + # The y scale is reversed because in image the vertical positive direction is typically downward
+       # Also note the limits where h>0 is the first parameter.
+       coord_equal() +
+       theme(legend.position = "bottom")
+)
+
+##################

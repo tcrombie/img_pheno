@@ -6,6 +6,7 @@ library(png)
 library(platetools)
 library(viridis)
 library(plotly)
+library(glue)
 
 # set working directory
 setwd(glue::glue("{dirname(rstudioapi::getActiveDocumentContext()$path)}/.."))
@@ -69,7 +70,7 @@ ui <- fluidPage(
       plotOutput(outputId = "overlay", width = 1000, height = 1000),
       
       # Output: Image linked to plate click
-      verbatimTextOutput("click")
+      plotOutput(outputId = "overlay_click", width = 1000, height = 1000)
     )
   )
 )
@@ -83,14 +84,6 @@ server <- function(input, output) {
   
   # Plot image of well and overlay centroid
   output$overlay <- renderPlot({
-    # # Plot image and overlay using png package and base R. Another option would be to use ggplot https://stackoverflow.com/questions/4993189/overlay-data-onto-background-image
-    # 
-    # img_control <- as.raster(png::readPNG("~/Desktop/20190723_Ben1/CP_output/RUN_7_FullDose_OUTPUT/20190618_1_A01_w1_overlay.png")) #read PNG as raster in R
-    # 
-    # plot(img_control, xlim = c(0, 2048), ylim = c(2048,0)) #plot raster with correct dimensions
-    # symbols(x = df$AreaShape_Center_X,
-    #         y = df$AreaShape_Center_Y,
-    #         circles = rep(5,nrow(df)), inches = FALSE, add = TRUE, bg=myColoursAlpha[2]) # draw points from selected model
     
     img <- readPNG(glue::glue("~/Desktop/20190723_Ben1/CP_output/RUN_7_FullDose_OUTPUT/20190618_{input$plates}_A01_w1_overlay.png")) 
     
@@ -126,13 +119,30 @@ server <- function(input, output) {
   })
   
   # Coupled event 2
-  output$click <- renderPrint({
+  output$overlay_click <- renderPlot({
     
     # Get subset based on selection
-    d <- event_data("plotly_click")
-    well <- d[1,5]
-    if (is.null(well)) "Click events appear here (double-click to clear)" else well
-  })
+    ed <- event_data("plotly_click")
+    well <- ed[1,5]
+      
+      img <- readPNG(glue::glue("~/Desktop/20190723_Ben1/CP_output/RUN_7_FullDose_OUTPUT/20190618_{input$plates}_{well}_w1_overlay.png")) 
+      
+      h<-dim(img)[1] # image height
+      w<-dim(img)[2] # image width
+      
+      plot(ggplot(df %>% dplyr::filter(Metadata_Plate == input$plates, Metadata_Well == ed[1,5])) +
+             aes(x = AreaShape_Center_X, y = AreaShape_Center_Y, fill = model_select) +
+             annotation_custom(grid::rasterGrob(img, width=unit(1,"npc"), height=unit(1,"npc")), 0, w, 0, -h) + # The minus is needed to get the y scale reversed
+             scale_x_continuous(expand=c(0,0),limits=c(0,w)) +
+             scale_y_reverse(expand=c(0,0),limits=c(h,0)) +
+             labs(x = "", y = "", fill = "Model Selection") +
+             geom_point(shape = 21, alpha = 0.5) + # The y scale is reversed because in image the vertical positive direction is typically downward
+             # Also note the limits where h>0 is the first parameter.
+             coord_equal() +
+             theme(legend.position = "bottom")
+      )
+      
+    })
   
 }
 

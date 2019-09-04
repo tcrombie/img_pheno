@@ -141,8 +141,6 @@ server <- function(input, output) {
   
 }
 
-
-
 #################
 # Call shinyapp #
 #################
